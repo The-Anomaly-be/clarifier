@@ -13,7 +13,7 @@ To use this script, you need to have the Clarity Refiners UI running locally. Th
 4. **Install Clarity Refiners UI**: Navigate to the "Components" section, search for "Clarity Refiners UI," and click "Install."
 5. **Start the Component**: Once installed, start the Clarity Refiners UI component. This will launch the Gradio API server locally at `http://127.0.0.1:7860/`.
 
-**Note**: Ensure the API server is running before executing the script. Replace the placeholder URL with the actual Pinokio website if available.
+**Note**: Ensure the API server is running before executing the script.
 
 ## Prerequisites
 

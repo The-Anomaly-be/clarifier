@@ -1,13 +1,13 @@
-# clarifier
+# Clarifier
 # Advanced detail enhancement and upscaling using Clarity Refiners UI (runs locally)
 
-This script provides upscaling with enhanced details for any picture, even the largest ones, and it runs locally on a simple GPU. It splits the large image into 1024x1024 tiles and enhances them individually, then it recomposes the image.
+This script I created for myself after using several "limited" paid services provides limitless upscaling with enhanced details for any picture, even the largest ones. It runs locally on a simple GPU. It splits the large image into 1024x1024 tiles and enhances them individually, then it recomposes the image. I'm using it to enhance further my 600 to 1000+ megapixels gigaprints (full wall printing, event banners, ...) based on my high resolution artworks.
 
 ## Installation of Pinokio with Clarity Refiners UI (the easiest way)
 
 To use this script, you need to have the Clarity Refiners UI running locally. The easiest "one click" way is to use Pinokio for an automated install and configuration. Follow these steps to install it:
 
-1. **Download Pinokio**: Visit [Pinokio's official website](https://pinokio.example.com) and download the installer for your operating system.
+1. **Download Pinokio**: Visit [Pinokio's official website](https://pinokio.computer/) and download the installer for your operating system.
 2. **Install Pinokio**: Run the installer and follow the on-screen instructions to complete the installation.
 3. **Open Pinokio**: Launch the Pinokio application.
 4. **Install Clarity Refiners UI**: Navigate to the "Components" section, search for "Clarity Refiners UI," and click "Install."

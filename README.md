@@ -39,12 +39,13 @@ To use the script, follow these steps:
 
 1. **Prepare Your Image**: Place your large image in a directory, e.g., `C:\enhance\sourceimage.jpg` (it also works on a Linux file system).
 2. **Specify Output Folder**: Choose or create a folder where the tiles and processing status will be saved, e.g., `C:\enhance\workfolder`.
-3. **Run the Script**: Open the script in a Python environment, set the `source` and `folder` variables, then execute:
+3. **Run the Script**: Open the script in a Python environment, set the `source`, `stylization` and `folder` variables, then execute:
 
 ```python
 source = "C:\\enhance\\sourceimage.jpg"
+stylization = "metallic paint, rust"
 folder = "C:\\enhance\\workfolder"
-splitandenhance(source, folder)
+splitandenhance(source, stylization, folder)
 ```
 
 ---
@@ -64,10 +65,11 @@ The script performs the following steps:
 - **Enhancing**:
   - Tiles are sent to the Clarity Refiners UI API at `http://127.0.0.1:7860/` for enhancement.
 
-- **(TODO) Progress Monitoring**:
-  - The script tracks the API’s batch processing progress, logging updates as percentages (this feature is under development and currently inaccurate due to concurrent and asynchronous calls).
+- **Progress Monitoring**:
+  - The script tracks the API’s batch processing progress, logging updates as percentages.
 
-- **Saving Results**:
+- **Collating the pieces into the output image**:
+  - All the pieces are collated together to create the resulting image and save it as `originalname`_enhanced_full.jpg.
   - After processing, the status and enhancement details are saved to `processing_status.txt` in the output folder.
   - The API opens the output folder automatically upon completion.
 
@@ -85,6 +87,7 @@ The enhancement process is governed by parameters that allow you to customize th
   - Use commas to separate ideas.
   - Include quality descriptors (e.g., "highres," "detailed").
   - Keep it concise but specific.
+** NEW: Stylization influence is now added directly in the function call **
 
 ### `negative_prompt`
 - **Description**: A text string listing qualities to avoid (e.g., `"worst quality, low quality, blurry, artifacts"`).

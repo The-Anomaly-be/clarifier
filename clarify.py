@@ -4,12 +4,9 @@ import math
 from gradio_client import Client, handle_file
 import time
 import logging
+import re
 
-# Import necessary libraries: PIL for image processing, os for file operations,
-# math for calculations, gradio_client for API interactions, time for delays,
-# and logging for logging events.
-
-# Set up logging to both file and console
+# Set up logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
@@ -20,59 +17,44 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Configure logging to record events at INFO level and above,
-# saving to 'split_and_enhance.log' and also printing to console.
-
 def resize_to_nearest_1024(image):
-    """Resize image so width and height are divisible by 1024 while maintaining aspect ratio."""
+    """Resize image so width and height are the smallest multiples of 1024 >= original size, maintaining aspect ratio."""
     original_width, original_height = image.size
     aspect_ratio = original_width / original_height
 
-    # Calculate new width as the largest multiple of 1024 less than or equal to original width
-    new_width = math.floor(original_width / 1024) * 1024
-    if new_width == 0:
-        new_width = 1024  # Ensure minimum width of 1024
+    # Calculate the smallest multiple of 1024 >= original width
+    new_width = math.ceil(original_width / 1024) * 1024
 
-    # Calculate new height based on aspect ratio
-    new_height = round(new_width / aspect_ratio)
-    # Make new height a multiple of 1024
-    new_height = math.floor(new_height / 1024) * 1024
-    if new_height == 0:
-        new_height = 1024  # Ensure minimum height of 1024
+    # Calculate corresponding height based on aspect ratio, then round to nearest multiple of 1024
+    new_height = new_width / aspect_ratio
+    new_height = math.ceil(new_height / 1024) * 1024
 
-    # Check if the new aspect ratio is close enough to the original
-    if abs((new_width / new_height) - aspect_ratio) > 0.01:
-        # If not, adjust width based on height
-        new_width = round(new_height * aspect_ratio)
-        new_width = math.floor(new_width / 1024) * 1024
+    # Check if the aspect ratio is preserved within a tolerance; adjust if needed
+    adjusted_aspect_ratio = new_width / new_height
+    if abs(adjusted_aspect_ratio - aspect_ratio) > 0.01:
+        # Recalculate width based on height to better match original aspect ratio
+        new_width = math.ceil((new_height * aspect_ratio) / 1024) * 1024
 
-    # Resize the image using LANCZOS filter for high-quality downscaling
+    logger.info(f"Resizing from {image.size} to ({new_width}, {new_height})")
     return image.resize((new_width, new_height), Image.Resampling.LANCZOS)
 
 def split_image(image_path, output_dir):
     """Split image into 1024x1024 tiles and return list of tile paths."""
     try:
-        # Open the source image
         img = Image.open(image_path)
     except Exception as e:
-        # Log error if image cannot be opened
         logger.error(f"Error opening image: {e}")
         return []
 
-    # Extract base name of the image file
     base_name = os.path.splitext(os.path.basename(image_path))[0]
-    # Create output directory if it doesn't exist
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
 
-    # Resize the image to make dimensions multiples of 1024
     resized_img = resize_to_nearest_1024(img)
     width, height = resized_img.size
-    # Calculate number of rows and columns of tiles
     rows = height // 1024
     cols = width // 1024
 
-    # Log original and resized dimensions, and the grid size
     logger.info(f"Original size: {img.size}")
     logger.info(f"Resized to: {resized_img.size}")
     logger.info(f"Splitting into {rows} rows and {cols} columns")
@@ -80,49 +62,40 @@ def split_image(image_path, output_dir):
     tile_paths = []
     for row in range(rows):
         for col in range(cols):
-            # Calculate the coordinates for cropping the tile
             left = col * 1024
             top = row * 1024
             right = left + 1024
             bottom = top + 1024
 
-            # Crop the tile from the resized image
             tile = resized_img.crop((left, top, right, bottom))
-            # Generate filename for the tile
             output_filename = f"{base_name}R{row + 1}C{col + 1}.jpg"
             output_path = os.path.join(output_dir, output_filename)
 
-            # Save the tile as JPEG with high quality
             tile.save(output_path, "JPEG", quality=95)
             tile_paths.append(output_path)
             logger.info(f"Saved {output_filename}")
 
-    return tile_paths
+    return tile_paths, rows, cols  # Return rows and cols for later use
 
-def process_tiles(tile_paths, output_status_file="processing_status.txt"):
+def process_tiles(tile_paths, stylization="HQ", output_status_file="processing_status.txt"):
     """Process image tiles using the batch processing API with progress tracking."""
     try:
-        # Connect to the Gradio API server running locally
         client = Client("http://127.0.0.1:7860/")
         logger.info("Connected to API server")
     except Exception as e:
-        # Log error if connection fails
         logger.error(f"Failed to connect to API server: {e}")
-        return
+        return []
 
     if not tile_paths:
-        # Warn if there are no tiles to process
         logger.warning("No tiles to process")
-        return
+        return []
 
-    # Prepare the list of files for the API
     file_list = [handle_file(f) for f in tile_paths]
     total_tiles = len(file_list)
 
-    # Define parameters for the batch processing API
     processing_params = {
         "files": file_list,
-        "prompt": "universe, galaxies, planets and stars, masterpiece, best quality, highres, detailed, 4k",
+        "prompt": stylization + ", masterpiece, best quality, highres, detailed, 4k",
         "negative_prompt": "worst quality, low quality, blurry, artifacts",
         "seed": -1,
         "reuse_seed": False,
@@ -139,29 +112,31 @@ def process_tiles(tile_paths, output_status_file="processing_status.txt"):
 
     try:
         logger.info("Starting batch processing...")
-
-        # Submit the batch processing job to the API
         job = client.submit(**processing_params, api_name="/batch_process_images")
 
-        # Monitor the job's progress
         last_progress = -1
         while not job.done():
             status = job.status()
             if hasattr(status, 'progress_data') and status.progress_data:
-                # Extract progress value (assuming it's a float between 0 and 1)
-                progress = status.progress_data[0].get('value', 0) if status.progress_data else 0
+                progress_unit = status.progress_data[0]
+                if hasattr(progress_unit, 'progress'):  # Check for ProgressUnit with 'progress' attribute
+                    progress = progress_unit.progress
+                elif hasattr(progress_unit, 'value'):  # Fallback for older 'value' attribute
+                    progress = progress_unit.value
+                elif isinstance(progress_unit, dict):  # Fallback for dictionary structure
+                    progress = progress_unit.get('value', 0)
+                else:
+                    logger.warning(f"Unknown progress_data structure: {progress_unit}")
+                    progress = 0
                 if isinstance(progress, (int, float)) and progress != last_progress:
-                    # Calculate percentage and log it
                     percentage = min(100, max(0, int(progress * 100)))
                     logger.info(f"Processing progress: {percentage}%")
                     last_progress = progress
             time.sleep(1)  # Wait 1 second before checking again
 
-        # Retrieve the final result once the job is done
         result = job.result()
         status, recent_enhancements, before_after = result
 
-        # Save the processing status and results to a file
         with open(output_status_file, 'w', encoding='utf-8') as f:
             f.write(f"Processing Status: {status}\n\n")
             f.write("Recent Enhancements:\n")
@@ -175,42 +150,99 @@ def process_tiles(tile_paths, output_status_file="processing_status.txt"):
         logger.info(f"Processed {len(recent_enhancements)} images")
         logger.info(f"Status saved to {output_status_file}")
 
-        # Open the output folder using the API
         client.predict(api_name="/open_output_folder")
         logger.info("Output folder opened")
 
+        enhanced_paths = [enhancement['image'] for enhancement in recent_enhancements]
+        return enhanced_paths
+
     except Exception as e:
-        # Log any errors that occur during processing
         logger.error(f"Error during processing: {e}")
         with open(output_status_file, 'w', encoding='utf-8') as f:
             f.write(f"Error: {str(e)}\n")
+        return []
 
-def splitandenhance(source_image, folder):
-    """
-    Split source image into tiles and enhance them using the API.
+def collate_tiles(enhanced_paths, rows, cols, output_dir, base_name):
+    """Collate enhanced tiles into a single image."""
+    if not enhanced_paths:
+        logger.error("No enhanced tiles to collate")
+        return
 
-    Args:
-        source_image (str): Path to the source image
-        folder (str): Directory for tiles and output
-    """
-    # Log the start of the process
+    # Determine tile size from the first enhanced tile
+    try:
+        first_tile = Image.open(enhanced_paths[0])
+        tile_size = first_tile.size[0]  # Assuming tiles are square (width = height)
+        logger.info(f"Detected tile size: {tile_size}x{tile_size}")
+    except Exception as e:
+        logger.error(f"Error determining tile size from {enhanced_paths[0]}: {e}")
+        tile_size = 4096  # Fallback to default if unable to determine
+        logger.warning(f"Using fallback tile size: {tile_size}x{tile_size}")
+
+    # Calculate full image dimensions
+    full_width = cols * tile_size
+    full_height = rows * tile_size
+
+    # Create a new blank image to paste tiles into
+    final_image = Image.new('RGB', (full_width, full_height))
+
+    # Regex to extract row and column from filename
+    pattern = re.compile(r'R(\d+)C(\d+)')
+
+    for tile_path in enhanced_paths:
+        try:
+            # Extract row and column from the filename
+            match = pattern.search(os.path.basename(tile_path))
+            if not match:
+                logger.warning(f"Could not parse row/column from {tile_path}")
+                continue
+            row = int(match.group(1)) - 1  # Convert to 0-based index
+            col = int(match.group(2)) - 1
+
+            # Open the enhanced tile
+            tile = Image.open(tile_path)
+            if tile.size[0] != tile_size or tile.size[1] != tile_size:
+                tile = tile.resize((tile_size, tile_size), Image.Resampling.LANCZOS)
+                logger.info(f"Resized {os.path.basename(tile_path)} to {tile_size}x{tile_size}")
+
+            # Calculate position to paste the tile
+            left = col * tile_size
+            top = row * tile_size
+
+            # Paste the tile into the final image
+            final_image.paste(tile, (left, top))
+            logger.info(f"Pasted tile {os.path.basename(tile_path)} at ({left}, {top})")
+
+        except Exception as e:
+            logger.error(f"Error processing tile {tile_path}: {e}")
+
+    # Save the final collated image
+    final_output_path = os.path.join(output_dir, f"{base_name}_enhanced_full.jpg")
+    final_image.save(final_output_path, "JPEG", quality=95)
+    logger.info(f"Collated image saved to {final_output_path}")
+
+def splitandenhance(source_image, folder, stylization):
+    """Split source image into tiles, enhance them, and collate into a full image."""
     logger.info(f"Starting process for {source_image}")
 
-    # Split the image into tiles
-    tile_paths = split_image(source_image, folder)
+    # Split the image into tiles and get grid dimensions
+    tile_paths, rows, cols = split_image(source_image, folder)
 
     if not tile_paths:
-        # If no tiles were created, log an error and abort
         logger.error("Failed to split image, aborting")
         return
 
-    # Process the tiles using the API
-    process_tiles(tile_paths, os.path.join(folder, "processing_status.txt"))
+    # Process the tiles and get enhanced paths
+    enhanced_paths = process_tiles(tile_paths, os.path.join(folder, "processing_status.txt"), stylization)
 
-    # Log the completion of the process
+    if enhanced_paths:
+        # Collate the enhanced tiles into a full image
+        base_name = os.path.splitext(os.path.basename(source_image))[0]
+        collate_tiles(enhanced_paths, rows, cols, folder, base_name)
+
     logger.info("Process completed")
 
 # Example usage
-source = "soureceimage.jpg"
-folder = "workfolder"
-splitandenhance(source, folder)
+source = "C:\\original.jpg"
+folder = "C:\\workfolder"
+stylization = "mechanical, gears, clockworks, metal, copper, silver, gold"
+splitandenhance(source, stylization, folder)

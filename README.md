@@ -80,6 +80,7 @@ The script performs the following steps:
 The enhancement process is governed by parameters that allow you to customize the output’s details, resolution, and quality. Adjust these in the code to tailor the results. Here’s a breakdown:
 
 ### `prompt`
+### NEW: Stylization prompt influence is now added directly in the function call
 - **Description**: A text string directing the enhancement toward specific themes or details (e.g., `"universe, galaxies, planets and stars, masterpiece, best quality, highres, detailed, 4k"` for space-themed, high-quality output).
 - **Effect**: Shapes the content and style of added details.
 - **Usage**: Modify to match your desired output (e.g., `"forest, trees, rivers, vibrant colors, highres"` for a natural landscape).
@@ -87,7 +88,6 @@ The enhancement process is governed by parameters that allow you to customize th
   - Use commas to separate ideas.
   - Include quality descriptors (e.g., "highres," "detailed").
   - Keep it concise but specific.
-** NEW: Stylization influence is now added directly in the function call **
 
 ### `negative_prompt`
 - **Description**: A text string listing qualities to avoid (e.g., `"worst quality, low quality, blurry, artifacts"`).

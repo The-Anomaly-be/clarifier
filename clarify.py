@@ -232,7 +232,7 @@ def splitandenhance(source_image, folder, stylization):
         return
 
     # Process the tiles and get enhanced paths
-    enhanced_paths = process_tiles(tile_paths, os.path.join(folder, "processing_status.txt"), stylization)
+    enhanced_paths = process_tiles(tile_paths, stylization, os.path.join(folder, "processing_status.txt"))
 
     if enhanced_paths:
         # Collate the enhanced tiles into a full image

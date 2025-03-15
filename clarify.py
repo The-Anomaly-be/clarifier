@@ -245,4 +245,4 @@ def splitandenhance(source_image, folder, stylization):
 source = "C:\\original.jpg"
 folder = "C:\\workfolder"
 stylization = "mechanical, gears, clockworks, metal, copper, silver, gold"
-splitandenhance(source, stylization, folder)
+splitandenhance(source, folder, stylization)

@@ -138,12 +138,12 @@ The enhancement process is governed by parameters that allow you to customize th
   - Adjust per prompt dominance.
 
 ### `tile_width` and `tile_height`
-- **Description**: Sets tile size (e.g., `256` for 256x256 patches).
+- **Description**: Sets tile size (e.g., `512` and `512` for 512x480 patches).
 - **Effect**: Smaller tiles reduce VRAM use but may affect coherence; larger tiles improve quality.
 - **Usage**: Lower (e.g., `128`) for low-VRAM systems or raise (e.g., `512`) if hardware permits.
 - **Tips**:
-  - `256` suits an RTX 4080 (12GB VRAM).
-  - Test with your GPU.
+  - `512` uses most memory of an RTX 4080 with 16GB VRAM.
+  - Test various settings with your own GPU.
 
 ### `denoise_strength`
 - **Description**: Controls noise removal (e.g., `0.3` for moderate denoising).

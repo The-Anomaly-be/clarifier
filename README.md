@@ -1,4 +1,5 @@
 # Clarifier
+![Clarifier](https://theanomaly.be//images//clarifier.jpg)
 # Advanced detail enhancement and upscaling using Clarity Refiners UI (runs locally)
 
 This script I created for myself after using several "limited" paid services provides limitless upscaling with enhanced details for any picture, even the largest ones. It runs locally on a simple GPU. It splits the large image into 1024x1024 tiles and enhances them individually, then it recomposes the image. I'm using it to enhance further my 600 to 1000+ megapixels gigaprints (full wall printing, event banners, ...) based on my high resolution artworks.

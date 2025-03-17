@@ -182,3 +182,25 @@ Logs include image sizes, tile counts, progress percentages, and errors.
 
 **Error Handling**: Check the log file if issues occur.
 
+## Example
+This example used this settings:
+
+    processing_params = {
+        "files": file_list,
+        "prompt": stylization + ", masterpiece, best quality, highres, detailed, 4k",
+        "negative_prompt": "worst quality, low quality, blurry, artifacts",
+        "seed": -1,
+        "reuse_seed": False,
+        "upscale_factor": 4,
+        "controlnet_scale": 0.5,
+        "controlnet_decay": 0.8,
+        "condition_scale": 8,
+        "tile_width": 512,
+        "tile_height": 512,
+        "denoise_strength": 0.4,
+        "num_inference_steps": 100,
+        "solver": "DDIM"
+    }
+
+I used "brushed metal, ceramic, rgb lighting" for the stylization. It got some artifacts in the seams, controlnet scale should have been higher for that to be fixed.
+
